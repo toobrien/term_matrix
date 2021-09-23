@@ -1,10 +1,12 @@
 from enum import IntEnum
 from json import dumps, loads
-from numpy import apply_along_axis, empty, nanmedian, NaN, ndarray, set_printoptions, nanstd
+from numpy import apply_along_axis, empty, isnan, nanmedian, NaN, ndarray, sort, searchsorted, set_printoptions, nanstd, warnings
 from sqlite3 import connect
 from sys import maxsize
 from tabulate import tabulate
 from time import time
+
+warnings.filterwarnings('ignore')
 
 class rec(IntEnum):
   name = 0
@@ -36,7 +38,7 @@ month_atoi = {
 }
 
 month_itoa = [
-  "F", "G", "H", "J", "K", "M"
+  "F", "G", "H", "J", "K", "M",
   "N", "Q", "U", "V", "X", "Z"
 ]
 
@@ -95,83 +97,110 @@ def get_record_sets(records):
 
 def matrix(record_sets, width):
   d = empty((len(record_sets), width * 12, width * 12), dtype="f")
-  m = empty((len(record_sets), width * 12, width * 12), dtype="i,i,i,U10")
+  md = empty((len(record_sets), width * 12, width * 12), dtype="i,i,i,U10")
 
   d[::] = NaN
-  m[::] = NaN
+  md[::] = NaN
 
   for i in range(len(record_sets)):
     record_set = record_sets[i]
     base_year = record_set[0][rec.year]
 
     for j in range(len(record_set)):
-      r0 = record_set[j]
-      row = 12 * (r0[rec.year] - base_year) + month_atoi[r0[rec.month]]
+      front = record_set[j]
+      row = 12 * (front[rec.year] - base_year) + month_atoi[front[rec.month]]
       
       for k in range(j + 1, len(record_set)):
-        r1 = record_set[k]
-        col = 12 * (r1[rec.year] - base_year) + month_atoi[r1[rec.month]]
+        back = record_set[k]
+        col = 12 * (back[rec.year] - base_year) + month_atoi[back[rec.month]]
         
-        d[i][row][col] = r0[rec.settle] - r1[rec.settle]
+        d[i][row][col] = front[rec.settle] - back[rec.settle]
 
-        m[i][row][col] = (
-          r0[rec.year],
-          r1[rec.year],
-          r0[rec.days_listed],
-          r0[rec.date]
+        md[i][row][col] = (
+          front[rec.year],
+          back[rec.year],
+          back[rec.days_listed],
+          back[rec.date]
         )
-        
-  
-  return d, m
 
-def table(d, m):
+  return d, md
+
+def rank(a):
+  a_0 = a[~isnan(a)]
+  a_1 = sort(a_0)
+  return searchsorted(a_1, a[0]) / len(a)
+
+if __name__ == "__main__":
+  db = get_db()
+
+  name = contracts["ZC"]["name"]
+  width = contracts["ZC"]["width"]
+
+  start = time()
+  records = get_records(db, name, "2005-01-01", "2035-01-01")
+  record_sets = get_record_sets(records)
+  end = time()
+  print(f"records: {end - start:0.2f} s")
+
+  start = time()
+  d, md = matrix(record_sets, width)
+  end = time()
+  print(f"matrix: {end - start:0.2f} s")
+
+  start = time()
   t_med = apply_along_axis(nanmedian, 0, d)
   t_std = apply_along_axis(nanstd, 0, d)
-  
-  today = m.shape[0] - 1
-  dim = m.shape[1]
-  
-  t = empty(shape = (dim, dim), dtype = "f,f,f")
+  t_pct = apply_along_axis(rank, 0, d)
+  end = time()
+  print(f"table: {end - start:0.2f} s\n")
+
+  #for record in records:
+  #  print(record)
+
+  #for record_set in record_sets:
+  #  print(dumps(record_set))
+
+  #set_printoptions(threshold = maxsize)
+  #print(m[m.shape[0] - 1, :, :])
+  #print(d[d.shape[0] - 1, :, :])
+  #print(t_med)
+  #print(t_std)
+  #print(t_pct)
+
+  dim = d.shape[1]
+  today = md.shape[0] - 1
+  total = 0
 
   for i in range(dim):
     for j in range(dim):
-      t[i, j] = ( 
-        d[today, i, j],
-        t_med[i, j],
-        t_std[i, j]
-      )
+      spread = d[today, i, j]
 
-  return t
+      if ~isnan(spread):
+        mdt = md[today, i, j]
 
+        pct = t_pct[i, j]
+        med = t_med[i, j]
+        std = t_std[i, j]
 
-if __name__ == "__main__":
-    db = get_db()
+        front_month = month_itoa[i % 12]
+        back_month = month_itoa[j % 12]
+        
+        front_year = mdt[meta.row_year] % 100
+        back_year = mdt[meta.col_year] % 100
+        
+        dl = mdt[meta.days_listed]
 
-    name = contracts["ZC"]["name"]
-    width = contracts["ZC"]["width"]
+        print(f"front  : ZC{front_month}{front_year}")
+        print(f"back   : ZC{back_month}{back_year}")
+        print(f"dl     : {dl}")
 
-    start = time()
-    records = get_records(db, name, "2005-01-01", "2035-01-01")
-    record_sets = get_record_sets(records)
-    end = time()
-    print(f"records: {end - start} ms")
+        print(f"spread : {spread}")
+        print(f"pct    : {pct:0.3f}")
+        print(f"med    : {med}")
+        print(f"std    : {std:0.3f}\n")
 
-    start = time()
-    d, m = matrix(record_sets, width)
-    end = time()
-    print(f"matrix: {end - start} ms")
+        total += 1
+  
+  print(f"total: {total}")
 
-    start = time()
-    t = table(d, m)
-    end = time()
-    print(f"table: {end - start}")
-
-    #for record in records:
-    #  print(record)
-
-    #for record_set in record_sets:
-    #  print(dumps(record_set))
-
-    set_printoptions(threshold = maxsize)
-    #print(m[len(m) - 1, :, :])
-    print(t)
+  
