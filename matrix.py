@@ -1,5 +1,6 @@
 from enum import IntEnum
 from json import dumps, loads
+#from matplotlib import pyplot as plt
 from numpy import apply_along_axis, empty, isnan, nanmedian, NaN, ndarray, sort, searchsorted, set_printoptions, nanstd, warnings
 from sqlite3 import connect
 from sys import maxsize
@@ -133,26 +134,28 @@ def rank(a):
 if __name__ == "__main__":
   db = get_db()
 
-  name = contracts["ZC"]["name"]
-  width = contracts["ZC"]["width"]
+  contract = "ZC"
+
+  name = contracts[contract]["name"]
+  width = contracts[contract]["width"]
 
   start = time()
   records = get_records(db, name, "2005-01-01", "2035-01-01")
   record_sets = get_record_sets(records)
   end = time()
-  print(f"records: {end - start:0.2f} s")
+  #print(f"records: {end - start:0.2f} s")
 
   start = time()
   d, md = matrix(record_sets, width)
   end = time()
-  print(f"matrix: {end - start:0.2f} s")
+  #print(f"matrix: {end - start:0.2f} s")
 
   start = time()
   t_med = apply_along_axis(nanmedian, 0, d)
   t_std = apply_along_axis(nanstd, 0, d)
   t_pct = apply_along_axis(rank, 0, d)
   end = time()
-  print(f"table: {end - start:0.2f} s\n")
+  #print(f"table: {end - start:0.2f} s\n")
 
   #for record in records:
   #  print(record)
@@ -171,6 +174,29 @@ if __name__ == "__main__":
   today = md.shape[0] - 1
   total = 0
 
+  cells = []
+  cell_map = {}
+  lbls = []
+
+  # set row/col labels, map cells
+  contract_count = len(record_sets[today])
+
+  for i in range(contract_count):
+    r = record_sets[today][i]
+    m = r[rec.month]
+    y = r[rec.year] % 100
+
+    lbl = f"{contract}{m}{y}"
+    lbls.append(lbl)
+
+    cell_map[(m, y)] = i
+
+    cells.append([ "" for i in range(contract_count) ])
+
+  #print(lbls)
+  #print(cell_map)
+
+  # set cell data
   for i in range(dim):
     for j in range(dim):
       spread = d[today, i, j]
@@ -181,26 +207,43 @@ if __name__ == "__main__":
         pct = t_pct[i, j]
         med = t_med[i, j]
         std = t_std[i, j]
+        dl = mdt[meta.days_listed]
 
         front_month = month_itoa[i % 12]
         back_month = month_itoa[j % 12]
         
         front_year = mdt[meta.row_year] % 100
         back_year = mdt[meta.col_year] % 100
-        
-        dl = mdt[meta.days_listed]
 
-        print(f"front  : ZC{front_month}{front_year}")
-        print(f"back   : ZC{back_month}{back_year}")
-        print(f"dl     : {dl}")
+        cell_txt = f"{spread:0.2f}, {pct:0.3f}, ({med}, {std:0.3f})"
+        #cell_txt = f"{pct:0.3f}"
 
-        print(f"spread : {spread}")
-        print(f"pct    : {pct:0.3f}")
-        print(f"med    : {med}")
-        print(f"std    : {std:0.3f}\n")
+        row = cell_map[(front_month, front_year)]
+        col = cell_map[(back_month, back_year)]
+        cells[row][col] = cell_txt
+
+        #print(f"front  : ZC{front_month}{front_year}")
+        #print(f"back   : ZC{back_month}{back_year}")
+        #print(f"dl     : {dl}")
+
+        #print(f"spread : {spread}")
+        #print(f"pct    : {pct:0.3f}")
+        #print(f"med    : {med}")
+        #print(f"std    : {std:0.3f}\n")
 
         total += 1
-  
-  print(f"total: {total}")
 
-  
+  # label rows
+  for i in range(contract_count):
+    cells[i].insert(0, lbls[i])
+    
+  print(
+    tabulate(
+      tabular_data = cells,
+      headers = lbls,
+      tablefmt = "html"
+    )
+  )
+
+  #print(f"total: {total}")
+
