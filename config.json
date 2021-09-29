@@ -1,3 +1,4 @@
 {
-  "db": "../viewer/srf.db"
+  "db": "../viewer/srf.db",
+  "output_dir": "./out/"
 }
