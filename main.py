@@ -1,5 +1,5 @@
 from contracts import contracts
-from json import loads
+from json import dumps, loads
 from record import record
 from spread_matrix import spread_matrix
 from sqlite3 import connect
@@ -74,8 +74,9 @@ if __name__ == "__main__":
     end = "2035-01-01"
 
     for contract in [ 
-      #"ZC", "ZS", "ZM", "ZL", "ZW", "KE",
-      #"GE",
+      "ZC", "ZS", "ZM", "ZL", "ZW", "KE",
+      "HE", "LE",
+      "GE",
       "NG", "CL", "HO", "RB"
     ]:
       t0 = time()
@@ -85,3 +86,6 @@ if __name__ == "__main__":
 
       with open(f"{output_dir}{contract}.html", "w") as fd:
         fd.write(sm.table("html").__str__())
+      
+      with open(f"{output_dir}{contract}.json", "w") as fd:
+        fd.write(dumps(sm.get_json()))

@@ -37,8 +37,9 @@ month_itoa = [
 
 # UTILITY FUNCTIONS
 def matrix(record_sets, width):
-  d = empty((len(record_sets), width * 12, width * 12), dtype="f")
-  md = empty((len(record_sets), width * 12, width * 12), dtype="i,i,i,U10")
+  dim = width * 12
+  d = empty((len(record_sets), dim, dim), dtype="f")
+  md = empty((len(record_sets), dim, dim), dtype="i,i,i,U10")
 
   d[::] = NaN
   md[::] = NaN
@@ -51,9 +52,13 @@ def matrix(record_sets, width):
       front = record_set[j]
       row = 12 * (front[record.year] - base_year) + month_atoi[front[record.month]]
       
+      if row >= dim: break
+      
       for k in range(j + 1, len(record_set)):
         back = record_set[k]
         col = 12 * (back[record.year] - base_year) + month_atoi[back[record.month]]
+
+        if col >= dim: break
         
         d[i][row][col] = front[record.settle] - back[record.settle]
 
@@ -84,17 +89,22 @@ class spread_matrix:
     t_pct = apply_along_axis(rank, 0, d)
 
     dim = d.shape[1]
-    today = md.shape[0] - 1
-    total = 0
+    depth = d.shape[0]
+    today = depth - 1
 
     cells = []
     cell_map = {}
     lbls = []
 
-    # set row/col labels, map cells
-    contract_count = len(record_sets[today])
+    json = {
+        "cells": None,
+        "cell_data": {}
+    }
 
-    for i in range(contract_count):
+    # set row/col labels, map cells
+    lbl_count = min(dim, len(record_sets[today]))
+
+    for i in range(lbl_count):
       r = record_sets[today][i]
       m = r[record.month]
       y = r[record.year] % 100
@@ -104,9 +114,9 @@ class spread_matrix:
 
       cell_map[(m, y)] = i
 
-      cells.append([ "" for i in range(contract_count) ])
+      cells.append([ "" for i in range(lbl_count) ])
 
-    # set cell data
+    # set cell data, json records
     for i in range(dim):
       for j in range(dim):
         spread = d[today, i, j]
@@ -115,8 +125,8 @@ class spread_matrix:
           mdt = md[today, i, j]
 
           pct = t_pct[i, j]
-          med = t_med[i, j]
-          std = t_std[i, j]
+          #med = t_med[i, j]
+          #std = t_std[i, j]
           dl = mdt[meta.days_listed]
 
           front_month = month_itoa[i % 12]
@@ -132,6 +142,19 @@ class spread_matrix:
           col = cell_map[(back_month, back_year)]
           cells[row][col] = cell_txt
 
+          cell_label = f"{front_month}{front_year}/{back_month}{back_year}"
+
+          
+          json["cell_data"][cell_label] = [
+              {
+                  "label": f"{front_month}{str(md[k, i, j][meta.row_year])[2:]}/{back_month}{str(md[k, i, j][meta.col_year])[2:]}",
+                  "spread": float(d[k, i, j]),
+                  "days_listed": int(md[k, i, j][meta.days_listed]),
+                  "date": md[k, i, j][meta.date]
+              }
+              for k in range(depth) if ~isnan(d[k, i, j])
+            ]
+
           #print(f"front  : ZC{front_month}{front_year}")
           #print(f"back   : ZC{back_month}{back_year}")
           #print(f"dl     : {dl}")
@@ -141,12 +164,13 @@ class spread_matrix:
           #print(f"med    : {med}")
           #print(f"std    : {std:0.3f}\n")
 
-          total += 1
-
     # label rows
-    for i in range(contract_count):
+    for i in range(lbl_count):
       cells[i].insert(0, lbls[i])
 
+    json["cells"] = cells
+    self.set_json(json)
+    
     self.set_cells(cells)
     self.set_labels(lbls)
 
@@ -157,8 +181,6 @@ class spread_matrix:
     self.set_median(t_med)
     self.set_stdev(t_std)
     self.set_days_listed(dl)
-    
-    #print(f"total: {total}")
 
   def table(self, fmt):
     return tabulate(self.get_cells(), self.get_labels(), fmt)
@@ -166,6 +188,7 @@ class spread_matrix:
   def set_cells(self, cells): self.cells = cells
   def set_data(self, data): self.data = data
   def set_days_listed(self, days_listed): self.days_listed = days_listed
+  def set_json(self, json): self.json = json
   def set_labels(self, labels): self.labels = labels
   def set_median(self, median): self.median = median
   def set_metadata(self, metadata): self.metadata = metadata
@@ -175,6 +198,7 @@ class spread_matrix:
   def get_cells(self): return self.cells
   def get_data(self): return self.data
   def get_days_listed(self, days_listed): self.days_listed = days_listed
+  def get_json(self): return self.json
   def get_labels(self): return self.labels
   def get_median(self): return self.median
   def get_metadata(self): return self.metadata
