@@ -6,7 +6,6 @@ from dash_core_components import Dropdown, Graph, Input as CInput
 from dash.dependencies import Input, Output, State
 from json import loads
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 from spread_matrix import idx
 from time import time
 
@@ -14,6 +13,9 @@ app = Dash(__name__)
 
 cells = {}
 rows = {}
+
+w = 400
+h = 400
 
 def load_rows(config):
 
@@ -47,29 +49,53 @@ def load_cells(config):
                 cells[contract]["labels"] = labels
 
 def get_graph_row(config):
+
+    default_contract = config["enabled"][0]
+    pct = cells[default_contract]["percentile"]
+    lbls = cells[default_contract]["labels"]
+
+    default_layout = {
+        "width": w,
+        "height": h
+    }
     
     graph_row = Tr(
         id = "graph_row",
         children = [
-            Table([
-                Tr([
-                    Td([
-                        #Graph(
-                        #    id = "scatterplots"
-                        #)
-                    ]),
-                    Td([
-                        #Graph(
-                        #    id = "pdf"
-                        #)
-                    ]),
-                    Td([
-                        Div(
-                            id = "statistics",
-                            children = []
+            Td([
+                Graph(
+                    id = "scatterplots",
+                    figure = go.Figure(
+                        layout = default_layout
+                    )
+                )
+            ]),
+            Td([
+                Graph(
+                    id = "pdf",
+                    figure = go.Figure(
+                        layout = default_layout
+                    )
+                )
+            ]),
+            Td([
+                Div(
+                    id = "heatmap_container",
+                    children = [
+                        Graph(
+                            id = "heatmap",
+                            figure = go.Figure(
+                                layout = default_layout,
+                                data = go.Heatmap(
+                                    x = lbls,
+                                    y = lbls,
+                                    z = pct,
+                                    transpose = True
+                                )
+                            )
                         )
-                    ])
-                ])
+                    ]
+                )
             ])
         ]
     )
@@ -82,59 +108,60 @@ def get_matrix_row(config):
     pct = cells[default_contract]["percentile"]
     lbls = cells[default_contract]["labels"]
 
+    cols =  [ { "name": "", "id": "" } ] +\
+            [ { "name": lbl, "id": lbl } for lbl in lbls ]
+    
+    rows = [ { lbls[i] : row[i] for i in range(len(row)) } for row in pct ]
+    for i in range(len(rows)):
+        rows[i][""] = lbls[i]
+
     matrix_row = Tr(
         id = "matrix_row",
         children = [
-            Div(
-                id = "heatmap_container",
+            Td(
+                colSpan = 3,
                 children = [
-                    Graph(
-                        id = "heatmap",
-                        figure = go.Figure(
-                            layout = {
-                                "width": 600,
-                                "height": 600
-                            },
-                            data = go.Heatmap(
-                                x = lbls,
-                                y = lbls,
-                                z = pct
+                    Div(
+                        id = "data_table_container",
+                        children = [
+                            dt.DataTable(
+                                id = "data_table",
+                                columns = cols,
+                                data = rows,
+                                fixed_rows = { "headers": True },
+                                style_table = { 
+                                    "height": f"{h}px",
+                                    "overflowY": "auto" 
+                                }
                             )
-                        )
+                        ]
                     )
                 ]
             )
         ]
     )
 
-    #    matrix_row = Tr(
-    #    id = "matrix_row",
-    #    children = [
-    #        dt.DataTable(
-    #            id = "data_table",
-    #            data = df.to_dict("records"),
-    #            columns=[ { "name": i, "id": i } for i in df.columns ]
-    #        )
-    #    ]
-    #)
-
     return matrix_row
 
 def get_select_row(config):
 
-    selections = [ 
-        Td(
-            id = f"{contract}_select",
-            children = [ contract ]
-        )
-        for contract in config["enabled"]
-    ]
-
     select_row = Tr(
         id = "select_row",
         children = [
-            Table([
-                Tr(selections)
+            Td([
+                Dropdown(
+                    id = "contract_dropdown",
+                    options = [ 
+                        { "label": contract, "value": contract }
+                        for contract in config["enabled"]
+                    ]
+                )
+            ]),
+            Td([
+                # empty
+            ]),
+            Td([
+                # empty
             ])
         ]
     )
@@ -169,6 +196,7 @@ if __name__ == "__main__":
     with open("./config.json") as fd:
 
         t0 = time()
+        print("loading...")
 
         config = loads(fd.read())
 
@@ -178,6 +206,6 @@ if __name__ == "__main__":
         app.layout = get_layout(config)
 
         t1 = time()
-        print(f"view loaded in {(t1 - t0):0.2f} s")
+        print(f"complete: {(t1 - t0):0.2f} s")
 
         app.run_server(debug = True)
