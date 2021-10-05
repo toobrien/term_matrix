@@ -4,6 +4,7 @@
     "enabled": [ 
         "ZS", "ZM", "ZL", "ZC", "ZW", "KE",
         "HE", "LE",
-        "NG", "CL"
+        "NG", "CL",
+        "GE"
     ]
 }
