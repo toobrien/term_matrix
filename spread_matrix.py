@@ -1,7 +1,7 @@
 from contracts import contracts
 from enum import IntEnum
 from record import record
-from numpy import apply_along_axis, empty, isnan, nanmedian, NaN, ndarray, sort, searchsorted, set_printoptions, nanstd, warnings
+from numpy import apply_along_axis, empty, isnan, nanmedian, NaN, sort, searchsorted, set_printoptions, nanstd, warnings
 from record import record
 #from sys import maxsize
 from tabulate import tabulate
@@ -10,68 +10,75 @@ warnings.filterwarnings('ignore')
 
 # CONSTANTS
 class meta(IntEnum):
-  row_year = 0
-  col_year = 1
-  days_listed = 2
-  date = 3
+    row_year = 0
+    col_year = 1
+    days_listed = 2
+    date = 3
+
+headers = [ "cell_id", "spread", "date", "settle", "days_listed" ]
+idx = [ "spread", "percentile", "median", "stdev", "days_listed" ]
 
 month_atoi = {
-  "F": 0,
-  "G": 1,
-  "H": 2,
-  "J": 3,
-  "K": 4,
-  "M": 5,
-  "N": 6,
-  "Q": 7,
-  "U": 8,
-  "V": 9,
-  "X": 10,
-  "Z": 11
+    "F": 0,
+    "G": 1,
+    "H": 2,
+    "J": 3,
+    "K": 4,
+    "M": 5,
+    "N": 6,
+    "Q": 7,
+    "U": 8,
+    "V": 9,
+    "X": 10,
+    "Z": 11
 }
 
 month_itoa = [
-  "F", "G", "H", "J", "K", "M",
-  "N", "Q", "U", "V", "X", "Z"
+    "F", "G", "H", "J", "K", "M",
+    "N", "Q", "U", "V", "X", "Z"
 ]
 
 # UTILITY FUNCTIONS
 def matrix(record_sets, width):
-  dim = width * 12
-  d = empty((len(record_sets), dim, dim), dtype="f")
-  md = empty((len(record_sets), dim, dim), dtype="i,i,i,U10")
 
-  d[::] = NaN
-  md[::] = NaN
+    d = empty((len(record_sets), width, width), dtype="f")
+    md = empty((len(record_sets), width, width), dtype="i,i,i,U10")
 
-  for i in range(len(record_sets)):
-    record_set = record_sets[i]
-    base_year = record_set[0][record.year]
+    d[::] = NaN
+    md[::] = NaN
 
-    for j in range(len(record_set)):
-      front = record_set[j]
-      row = 12 * (front[record.year] - base_year) + month_atoi[front[record.month]]
-      
-      if row >= dim: break
-      
-      for k in range(j + 1, len(record_set)):
-        back = record_set[k]
-        col = 12 * (back[record.year] - base_year) + month_atoi[back[record.month]]
+    for i in range(len(record_sets)):
 
-        if col >= dim: break
+        record_set = record_sets[i]
+        base_year = record_set[0][record.year]
+
+        for j in range(len(record_set)):
+
+            front = record_set[j]
+            row = 12 * (front[record.year] - base_year) + month_atoi[front[record.month]]
+
+            if row >= width: break
         
-        d[i][row][col] = front[record.settle] - back[record.settle]
+            for k in range(j + 1, len(record_set)):
 
-        md[i][row][col] = (
-          front[record.year],
-          back[record.year],
-          back[record.days_listed],
-          back[record.date]
-        )
+                back = record_set[k]
+                col = 12 * (back[record.year] - base_year) + month_atoi[back[record.month]]
 
-  return d, md
+                if col >= width: break
+            
+                d[i][row][col] = front[record.settle] - back[record.settle]
+
+                md[i][row][col] = (
+                    front[record.year],
+                    back[record.year],
+                    back[record.days_listed],
+                    back[record.date]
+                )
+
+    return d, md
 
 def rank(a):
+
   a_0 = a[~isnan(a)]
   a_1 = sort(a_0)
   todays_spread = a[-1]
@@ -80,127 +87,139 @@ def rank(a):
 # CLASS
 class spread_matrix:
 
-  def __init__(self, contract, record_sets):
-    dim = contracts[contract]["width"]
-    d, md = matrix(record_sets, dim)
-    
-    t_med = apply_along_axis(nanmedian, 0, d)
-    t_std = apply_along_axis(nanstd, 0, d)
-    t_pct = apply_along_axis(rank, 0, d)
+    def __init__(self, contract, record_sets):
 
-    dim = d.shape[1]
-    depth = d.shape[0]
-    today = depth - 1
+        max_years = contracts[contract]["years"]
+        
+        d, md = matrix(record_sets, max_years * 12)
+        
+        t_med = apply_along_axis(nanmedian, 0, d)
+        t_std = apply_along_axis(nanstd, 0, d)
+        t_pct = apply_along_axis(rank, 0, d)
 
-    cells = []
-    cell_map = {}
-    lbls = []
+        dim = d.shape[1]
+        depth = d.shape[0]
+        today = depth - 1
+        todays_records = record_sets[today]
 
-    json = {
-        "cells": None,
-        "cell_data": {}
-    }
+        self.cells = { i : [] for i in idx }
+        cell_map = {}
+        lbls = []
 
-    # set row/col labels, map cells
-    lbl_count = min(dim, len(record_sets[today]))
+        rows = []
 
-    for i in range(lbl_count):
-      r = record_sets[today][i]
-      m = r[record.month]
-      y = r[record.year] % 100
+        # set row/col labels, intialize and map cells
+        base_year = todays_records[0][record.year]
+        width = 0
 
-      lbl = f"{contract}{m}{y}"
-      lbls.append(lbl)
+        for i in range(len(todays_records)):
 
-      cell_map[(m, y)] = i
+            r = todays_records[i]
+            m = r[record.month]
+            y = r[record.year]
 
-      cells.append([ "" for i in range(lbl_count) ])
+            if y - base_year < max_years:
 
-    # set cell data, json records
-    for i in range(dim):
-      for j in range(dim):
-        spread = d[today, i, j]
+                y_i = r[record.year] % 100
+                y_s = str(r[record.year])[2:]
 
-        if ~isnan(spread):
-          mdt = md[today, i, j]
+                lbls.append(f"{contract}{m}{y_s}")
 
-          pct = t_pct[i, j]
-          #med = t_med[i, j]
-          #std = t_std[i, j]
-          dl = mdt[meta.days_listed]
+                cell_map[(m, y_i)] = i
 
-          front_month = month_itoa[i % 12]
-          back_month = month_itoa[j % 12]
-          
-          front_year = mdt[meta.row_year] % 100
-          back_year = mdt[meta.col_year] % 100
+                width += 1
+        
+        for i in range(width):
 
-          #cell_txt = f"{spread:0.2f}, {pct:0.3f}, ({med}, {std:0.3f})"
-          cell_txt = f"{pct:0.3f}"
+            for i in idx:
 
-          row = cell_map[(front_month, front_year)]
-          col = cell_map[(back_month, back_year)]
-          cells[row][col] = cell_txt
+                self.cells[i].append([ 0 for i in range(width) ])
 
-          cell_label = f"{front_month}{front_year}/{back_month}{back_year}"
+        # set cell data, json records
+        for i in range(dim):
 
-          
-          json["cell_data"][cell_label] = [
-              {
-                  "label": f"{front_month}{str(md[k, i, j][meta.row_year])[2:]}/{back_month}{str(md[k, i, j][meta.col_year])[2:]}",
-                  "spread": float(d[k, i, j]),
-                  "days_listed": int(md[k, i, j][meta.days_listed]),
-                  "date": md[k, i, j][meta.date]
-              }
-              for k in range(depth) if ~isnan(d[k, i, j])
-            ]
+            if i // 12 >= max_years: break
 
-          #print(f"front  : ZC{front_month}{front_year}")
-          #print(f"back   : ZC{back_month}{back_year}")
-          #print(f"dl     : {dl}")
+            for j in range(dim):
+            
+                if j // 12 >= max_years: break
 
-          #print(f"spread : {spread}")
-          #print(f"pct    : {pct:0.3f}")
-          #print(f"med    : {med}")
-          #print(f"std    : {std:0.3f}\n")
+                spread = d[today, i, j]
+                
+                if isnan(spread): continue
+            
+                # statistics
+                mdt = md[today, i, j]
+                pct = t_pct[i, j]
+                med = t_med[i, j]
+                std = t_std[i, j]
+                dl = mdt[meta.days_listed]
 
-    # label rows
-    for i in range(lbl_count):
-      cells[i].insert(0, lbls[i])
+                # indexes
+                front_month = month_itoa[i % 12]
+                back_month = month_itoa[j % 12]
+                
+                front_year = mdt[meta.row_year] % 100
+                back_year = mdt[meta.col_year] % 100
 
-    json["cells"] = cells
-    self.set_json(json)
-    
-    self.set_cells(cells)
-    self.set_labels(lbls)
+                row = cell_map[(front_month, front_year)]
+                col = cell_map[(back_month, back_year)]
+                
+                # table data
+                #self.cells["spread"][row][col] = f"{spread:0.2f}"
+                #self.cells["percentile"][row][col] = f"{pct:0.3f}"
+                #self.cells["median"][row][col] = f"{med}"
+                #self.cells["stdev"][row][col] = f"{std:0.3f}"
+                #self.cells["days_listed"][row][col] = f"{dl}"
+                
+                self.cells["spread"][row][col] = spread
+                self.cells["percentile"][row][col] = round(pct, 3)
+                self.cells["median"][row][col] = med
+                self.cells["stdev"][row][col] = round(std, 2)
+                self.cells["days_listed"][row][col] = dl
 
-    self.set_metadata(md)
-    self.set_data(d)
+                # scatterplot, histogram, etc. data
+                cell_id = f"{front_month}{front_year}/{back_month}{back_year}"
 
-    self.set_percentile(t_pct)
-    self.set_median(t_med)
-    self.set_stdev(t_std)
-    self.set_days_listed(dl)
+                for k in range(depth):
+                    
+                    settle = d[k, i, j]
+                    
+                    if ~isnan(settle):
 
-  def table(self, fmt):
-    return tabulate(self.get_cells(), self.get_labels(), fmt)
+                        mdk = md[k, i, j]
+                        front_year_k = str(mdk[meta.row_year])[2:]
+                        back_year_k = str(md[k, i, j][meta.col_year])[2:]
+                        spread_k = f"{front_month}{front_year_k}/{back_month}{back_year_k}"                        
+                        date_k = mdk[meta.date]
+                        days_listed_k = int(mdk[meta.days_listed])
 
-  def set_cells(self, cells): self.cells = cells
-  def set_data(self, data): self.data = data
-  def set_days_listed(self, days_listed): self.days_listed = days_listed
-  def set_json(self, json): self.json = json
-  def set_labels(self, labels): self.labels = labels
-  def set_median(self, median): self.median = median
-  def set_metadata(self, metadata): self.metadata = metadata
-  def set_percentile(self, percentile): self.percentile = percentile
-  def set_stdev(self, stdev): self.stdev = stdev
+                        rows.append(
+                            [ 
+                                cell_id,
+                                spread_k,
+                                date_k,
+                                settle,
+                                days_listed_k,
+                            ]
+                        )
+        self.set_rows(rows)
+        self.set_labels(lbls)
+        self.set_metadata(md)
+        self.set_data(d)
+        
+    def table(self, fmt):
 
-  def get_cells(self): return self.cells
-  def get_data(self): return self.data
-  def get_days_listed(self, days_listed): self.days_listed = days_listed
-  def get_json(self): return self.json
-  def get_labels(self): return self.labels
-  def get_median(self): return self.median
-  def get_metadata(self): return self.metadata
-  def get_percentile(self): return self.percentile
-  def get_stdev(self): return self.stdev
+        return tabulate(self.get_cells(), self.get_labels(), fmt)
+
+    def set_cells(self, cells): self.cells = cells
+    def set_data(self, data): self.data = data
+    def set_labels(self, labels): self.labels = labels
+    def set_metadata(self, metadata): self.metadata = metadata
+    def set_rows(self, rows): self.rows = rows
+
+    def get_cells(self, i): return self.cells[i]
+    def get_data(self): return self.data
+    def get_labels(self): return self.labels
+    def get_metadata(self): return self.metadata
+    def get_rows(self): return self.rows

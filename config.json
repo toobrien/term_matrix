@@ -1,4 +1,9 @@
 {
-  "db": "../viewer/srf.db",
-  "output_dir": "./out/"
+    "db": "../viewer/srf.db",
+    "output_dir": "./out/",
+    "enabled": [ 
+        "ZS", "ZM", "ZL", "ZC", "ZW", "KE",
+        "HE", "LE",
+        "NG", "CL"
+    ]
 }
