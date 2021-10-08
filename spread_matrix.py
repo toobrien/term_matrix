@@ -15,7 +15,14 @@ class meta(IntEnum):
     days_listed = 2
     date = 3
 
-headers = [ "cell_id", "spread", "date", "settle", "days_listed" ]
+class spread_row(IntEnum):
+    cell_id = 0
+    spread_id = 1
+    date = 2
+    settle = 3
+    days_listed = 4
+
+headers = [ "cell_id", "spread_id", "date", "settle", "days_listed" ]
 idx = [ "spread", "percentile", "median", "stdev", "days_listed" ]
 
 month_atoi = {
@@ -190,14 +197,14 @@ class spread_matrix:
                         mdk = md[k, i, j]
                         front_year_k = str(mdk[meta.row_year])[2:]
                         back_year_k = str(md[k, i, j][meta.col_year])[2:]
-                        spread_k = f"{front_month}{front_year_k}/{back_month}{back_year_k}"                        
+                        spread_id_k = f"{front_month}{front_year_k}/{back_month}{back_year_k}"                        
                         date_k = mdk[meta.date]
                         days_listed_k = int(mdk[meta.days_listed])
 
                         rows.append(
                             [ 
                                 cell_id,
-                                spread_k,
+                                spread_id_k,
                                 date_k,
                                 settle,
                                 days_listed_k,

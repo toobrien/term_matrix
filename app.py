@@ -6,7 +6,7 @@ from dash_core_components import Dropdown, Graph, Input as CInput
 from dash.dependencies import Input, Output, State
 from json import dumps, loads
 import plotly.graph_objects as go
-from spread_matrix import idx
+from spread_matrix import idx, spread_row
 from time import time
 
 
@@ -19,6 +19,40 @@ default_layout = {
     "width": 500,
     "height": 400
 }
+
+element_references = {
+    "table": None,
+    "scatterplot": None,
+    "pdf": None,
+    "heatmap": None
+}
+
+def get_contract(cell):
+
+    return cell["column_id"][0:2]
+
+
+def get_spread_rows(cell):
+
+    spread_row_subset = None
+
+    if cell:
+        contract = get_contract(cell)
+        labels = cells[contract]["labels"]
+
+        front_month = labels[cell["row"]]
+        back_month = labels[cell["column"]]
+        cell_id = f"{front_month[2:]}/{back_month[2:]}"
+
+        spread_row_set = rows[contract]
+
+        spread_row_subset = [ 
+                        row for row in spread_row_set 
+                        if row[spread_row.cell_id] == cell_id
+                    ]
+    
+    return spread_row_subset
+
 
 def load_rows(config):
 
@@ -53,37 +87,59 @@ def load_cells(config):
                 cells[contract]["labels"] = labels
 
 
-def get_scatterplot(contract, cell):
+def get_scatterplot(spread_rows):
 
-    scatterplot = None
-
-    if cell:
-        pass
-    else:
-        scatterplot = Graph(
-            id = "scatterplot",
-            figure = go.Figure(
-                layout = default_layout
-            )
+    fig = go.Figure(
+            layout = default_layout
         )
+
+    scatterplot = Graph(
+        id = "scatterplot",
+        figure = fig
+    )
+
+    if spread_rows:
+
+        traces = {}
+
+        # build traces: group rows by spread
+        for r in spread_rows:
+
+            id = r[spread_row.spread_id]
+
+            if id not in traces:
+
+                traces[id] = {
+                    "x": [],
+                    "y": [],
+                    "name": id
+                }
+
+            traces[id]["x"].append(r[spread_row.days_listed])
+            traces[id]["y"].append(r[spread_row.settle])
+
+        for id, trace in traces.items():
+
+            fig.add_trace(go.Scatter(**trace))
 
     return scatterplot
 
 
-def get_pdf(contract, cell):
+def get_pdf(spread_rows):
 
-    pdf = None
+    fig = go.Figure(
+        layout = default_layout
+    )
+
+    pdf = Graph(
+        id = "pdf",
+        figure = fig
+    )
     
-    if cell:
+    if spread_rows:
+
         pass
-    else:
-        pdf = Graph(
-            id = "pdf",
-            figure = go.Figure(
-                layout = default_layout
-            )
-        )
-    
+
     return pdf
 
 
@@ -117,7 +173,7 @@ def get_graph_row(config):
                 Div(
                     id = "scatterplot_container",
                     children = [
-                        get_scatterplot(None, None)
+                        get_scatterplot(None)
                     ]
                 )
             ]),
@@ -125,7 +181,7 @@ def get_graph_row(config):
                 Div(
                     id = "pdf_container",
                     children = [
-                        get_pdf(None, None)
+                        get_pdf(None)
                     ]
                 )
             ]),
@@ -250,20 +306,26 @@ def update_layout(contract, cell):
     source = callback_context.triggered[0]["prop_id"]
 
     if source == ".":
+
         contract = config["enabled"][0]
-
-    table = get_data_table(contract)
-    heatmap = get_heatmap(contract)
-
-    if source == "contract_dropdown.value":
-
-        contract = None
         cell = None
 
-    scatterplot = get_scatterplot(contract, cell)
-    pdf = get_pdf(contract, cell)
+    if source in [ ".", "contract_dropdown.value" ]:
 
-    return table, scatterplot, pdf, heatmap
+        element_references["table"] = get_data_table(contract)
+        element_references["heatmap"] = get_heatmap(contract)
+
+    if source in [ ".", "data_table.active_cell" ]:
+
+        spread_rows = get_spread_rows(cell)
+        element_references["scatterplot"] = get_scatterplot(spread_rows)
+        element_references["pdf"] = get_pdf(spread_rows)
+
+    return \
+        element_references["table"],\
+        element_references["scatterplot"],\
+        element_references["pdf"],\
+        element_references["heatmap"]
 
 
 if __name__ == "__main__":
@@ -282,5 +344,9 @@ if __name__ == "__main__":
 
         t1 = time()
         print(f"complete: {(t1 - t0):0.2f} s")
+
+        #cell = {'row': 0, 'column': 3, 'column_id': 'ZSH22'}
+        #spread_rows = get_spread_rows(cell)
+        #x = get_scatterplot(spread_rows)
 
         app.run_server(debug = True)
