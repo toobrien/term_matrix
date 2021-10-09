@@ -2,9 +2,9 @@ from csv import QUOTE_NONNUMERIC, reader
 from dash import callback_context, Dash
 import dash_table as dt
 from dash_html_components import Div, Td, Tr, Table
-from dash_core_components import Dropdown, Graph, Input as CInput
-from dash.dependencies import Input, Output, State
-from json import dumps, loads
+from dash_core_components import Dropdown, Graph, Input
+from dash.dependencies import Input, Output
+from json import loads
 import plotly.graph_objects as go
 from spread_matrix import idx, spread_row
 from time import time
@@ -365,9 +365,5 @@ if __name__ == "__main__":
 
         t1 = time()
         print(f"complete: {(t1 - t0):0.2f} s")
-
-        #cell = {'row': 0, 'column': 3, 'column_id': 'ZSH22'}
-        #spread_rows = get_spread_rows(cell)
-        #x = get_scatterplot(spread_rows)
 
         app.run_server(debug = True)
