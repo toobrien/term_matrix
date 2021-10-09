@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from spread_matrix import idx, spread_row
 from time import time
 
+# CONSTANTS
 
 app = Dash(__name__)
 
@@ -26,6 +27,11 @@ element_references = {
     "pdf": None,
     "heatmap": None
 }
+
+step = 0.8 / 25
+min_opacity = 0.2 - step
+
+# FUNCTIONS
 
 def get_contract(cell):
 
@@ -100,19 +106,29 @@ def get_scatterplot(spread_rows):
 
     if spread_rows:
 
-        traces = {}
-
         # build traces: group rows by spread
+        traces = {}
+        opacity = min_opacity
+
         for r in spread_rows:
 
             id = r[spread_row.spread_id]
 
             if id not in traces:
 
+                color = "#0000FF"
+                if r[spread_row.cell_id] == id: color = "#FF0000"
+                opacity += step
+
                 traces[id] = {
                     "x": [],
                     "y": [],
-                    "name": id
+                    "name": id,
+                    "mode": "markers",
+                    "marker": {
+                        "color": color
+                    },
+                    "opacity": opacity
                 }
 
             traces[id]["x"].append(r[spread_row.days_listed])
@@ -138,7 +154,12 @@ def get_pdf(spread_rows):
     
     if spread_rows:
 
-        pass
+        fig.add_trace(
+            go.Histogram(
+                x = [ r[spread_row.settle] for r in spread_rows ],
+                histnorm = "probability"
+            )
+        )
 
     return pdf
 
