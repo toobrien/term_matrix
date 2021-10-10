@@ -13,11 +13,36 @@ from time import time
 
 app = Dash(__name__)
 
+# data
 cells = {}
 rows = {}
 
-default_layout = {
-    "width": 500,
+# figure layouts
+margins = {
+    "l": 10,
+    "r": 10
+}
+
+scatterplot_layout = {
+    "width": 550,
+    "height": 400,
+    "margin": margins
+}
+
+pdf_layout = {
+    "width": 400,
+    "height": 400,
+    "margin": margins
+}
+
+heatmap_layout = {
+    "width": 400,
+    "height": 400,
+    "margin": margins
+}
+
+table_layout = {
+    "width": 1300,
     "height": 400
 }
 
@@ -47,7 +72,7 @@ def get_spread_rows(cell):
         labels = cells[contract]["labels"]
 
         front_month = labels[cell["row"]]
-        back_month = labels[cell["column"]]
+        back_month = labels[cell["column"] - 1]
         cell_id = f"{front_month[2:]}/{back_month[2:]}"
 
         spread_row_set = rows[contract]
@@ -96,7 +121,7 @@ def load_cells(config):
 def get_scatterplot(spread_rows):
 
     fig = go.Figure(
-            layout = default_layout
+            layout = scatterplot_layout
         )
 
     scatterplot = Graph(
@@ -144,7 +169,7 @@ def get_scatterplot(spread_rows):
 def get_pdf(spread_rows):
 
     fig = go.Figure(
-        layout = default_layout
+        layout = pdf_layout
     )
 
     pdf = Graph(
@@ -169,15 +194,19 @@ def get_heatmap(contract):
     pct = cells[contract]["percentile"]
     lbls = cells[contract]["labels"]
     
+    # reverse so heatmap matches table
+    reversed_lbls = lbls[::-1]
+    reversed_pct = pct[::-1]
+
     return Graph(
         id = "heatmap",
         figure = go.Figure(
-        layout = default_layout,
+        layout = heatmap_layout,
         data = go.Heatmap(
                 x = lbls,
-                y = lbls,
-                z = pct,
-                transpose = True
+                y = reversed_lbls,
+                z = reversed_pct,
+                showscale = False
             )
         )
     )
@@ -238,8 +267,9 @@ def get_data_table(contract):
         data = rows,
         fixed_rows = { "headers": True },
         style_table = { 
-            "height": f"{default_layout['height']}px",
-            "overflowY": "auto"
+            "height": f"{table_layout['height']}px",
+            "overflowY": "auto",
+            "overflowX": "auto"
         }
     )
 
@@ -256,6 +286,7 @@ def get_matrix_row(config):
                 children = [
                     Div(
                         id = "data_table_container",
+                        style = { "width": table_layout["width"] },
                         children = [ 
                             get_data_table(default_contract)
                         ]
