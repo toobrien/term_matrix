@@ -12,6 +12,7 @@ from time import time
 # CONSTANTS
 
 app = Dash(__name__)
+app.title = "spread_matrix"
 
 # data
 cells = {}
@@ -148,6 +149,7 @@ def get_scatterplot(spread_rows):
                 traces[id] = {
                     "x": [],
                     "y": [],
+                    "text": [],
                     "name": id,
                     "mode": "markers",
                     "marker": {
@@ -158,6 +160,7 @@ def get_scatterplot(spread_rows):
 
             traces[id]["x"].append(r[spread_row.days_listed])
             traces[id]["y"].append(r[spread_row.settle])
+            traces[id]["text"].append(r[spread_row.date])
 
         for id, trace in traces.items():
 
@@ -270,6 +273,9 @@ def get_data_table(contract):
             "height": f"{table_layout['height']}px",
             "overflowY": "auto",
             "overflowX": "auto"
+        },
+        style_header = {
+            "overflow": "hidden"
         }
     )
 
@@ -286,7 +292,9 @@ def get_matrix_row(config):
                 children = [
                     Div(
                         id = "data_table_container",
-                        style = { "width": table_layout["width"] },
+                        style = { 
+                            "width": table_layout["width"]
+                        },
                         children = [ 
                             get_data_table(default_contract)
                         ]
