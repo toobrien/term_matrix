@@ -81,7 +81,7 @@ if __name__ == "__main__":
       output_dir = config["output_dir"]
       active_contracts = { k : contracts[k] for k in config["enabled"] }
 
-      start = "2005-01-01"
+      start = "2000-01-01"
       end = "2035-01-01"
 
       for contract in active_contracts:

@@ -3,6 +3,7 @@
     "output_dir": "./out/",
     "enabled": [ 
         "ZS", "ZM", "ZL", "ZC", "ZW", "KE",
+        "KC",
         "HE", "LE",
         "NG", "CL",
         "GE"

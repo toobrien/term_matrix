@@ -259,8 +259,8 @@ def get_data_table(contract):
 
     cols =  [ { "name": "", "id": "" } ] +\
             [ { "name": lbl, "id": lbl } for lbl in lbls ]
-    
     rows = [ { lbls[i] : row[i] for i in range(len(row)) } for row in pct ]
+
     for i in range(len(rows)):
         rows[i][""] = lbls[i]
     
@@ -351,42 +351,37 @@ def get_layout(config):
 
 @app.callback(
     Output("data_table_container", "children"),
-    Output("scatterplot_container", "children"),
-    Output("pdf_container", "children"),
     Output("heatmap_container", "children"),
-    Input("contract_dropdown", "value"),
-    Input("data_table", "active_cell")
+    Input("contract_dropdown", "value")
 )
-def update_layout(contract, cell):
-
-    #print(f"triggered: {callback_context.triggered}")
-    #print(f"contract: {contract}")
-    #print(f"cell: {cell}")
+def update_table_and_heatmap(contract):
 
     source = callback_context.triggered[0]["prop_id"]
 
-    if source == ".":
+    if source == ".": contract = config["enabled"][0]
 
-        contract = config["enabled"][0]
-        cell = None
+    table = get_data_table(contract)
+    heatmap = get_heatmap(contract)
 
-    if source in [ ".", "contract_dropdown.value" ]:
+    return table, heatmap
 
-        element_references["table"] = get_data_table(contract)
-        element_references["heatmap"] = get_heatmap(contract)
+@app.callback(
+    Output("scatterplot_container", "children"),
+    Output("pdf_container", "children"),
+    Input("data_table", "active_cell")
+)
+def update_scatter_and_pdf(cell):
 
-    if source in [ ".", "data_table.active_cell" ]:
+    source = callback_context.triggered[0]["prop_id"]
 
-        spread_rows = get_spread_rows(cell)
-        element_references["scatterplot"] = get_scatterplot(spread_rows)
-        element_references["pdf"] = get_pdf(spread_rows)
+    if source == ".": cell = None
 
-    return \
-        element_references["table"],\
-        element_references["scatterplot"],\
-        element_references["pdf"],\
-        element_references["heatmap"]
+    spread_rows = get_spread_rows(cell)
+    
+    scatterplot = get_scatterplot(spread_rows)
+    pdf = get_pdf(spread_rows)
 
+    return scatterplot, pdf
 
 if __name__ == "__main__":
 
