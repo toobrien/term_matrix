@@ -2,3 +2,6 @@
 __pycache__
 out
 srf.db
+config.json
+build_database.py
+update.sh

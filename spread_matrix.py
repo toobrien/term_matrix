@@ -1,7 +1,7 @@
 from contracts import contracts
 from enum import IntEnum
 from record import record
-from numpy import apply_along_axis, empty, isnan, nanmedian, NaN, sort, searchsorted, set_printoptions, nanstd, warnings
+from numpy import apply_along_axis, empty, isnan, nanmedian, NaN, sort, searchsorted, nanstd, warnings
 from record import record
 #from sys import maxsize
 from tabulate import tabulate
@@ -73,7 +73,7 @@ def matrix(record_sets, width):
 
                 if col >= width: break
             
-                d[i][row][col] = front[record.settle] - back[record.settle]
+                d[i][row][col] = -front[record.settle] + back[record.settle]
 
                 md[i][row][col] = (
                     front[record.year],
@@ -171,13 +171,6 @@ class spread_matrix:
 
                 row = cell_map[(front_month, front_year)]
                 col = cell_map[(back_month, back_year)]
-                
-                # table data
-                #self.cells["spread"][row][col] = f"{spread:0.2f}"
-                #self.cells["percentile"][row][col] = f"{pct:0.3f}"
-                #self.cells["median"][row][col] = f"{med}"
-                #self.cells["stdev"][row][col] = f"{std:0.3f}"
-                #self.cells["days_listed"][row][col] = f"{dl}"
                 
                 self.cells["spread"][row][col] = spread
                 self.cells["percentile"][row][col] = round(pct, 3)
