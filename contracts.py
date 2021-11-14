@@ -13,7 +13,7 @@ contracts = {
     "G": { "srf_name": "G", "years": 5 },
     "RB": { "srf_name": "RB", "years": 5 },
     "HO": { "srf_name": "HO", "years": 5 },
-    "ATW": { "srf_name": "ATW", "years": 5 },
+    "PK": { "srf_name": "ATW", "years": 5 },
     "CC": { "srf_name": "CC", "years": 5 },
     "KC": { "srf_name": "KC", "years": 5 },
     "SB": { "srf_name": "SB", "years": 5 },
