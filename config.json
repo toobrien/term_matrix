@@ -1,5 +1,5 @@
 {
-    "db": "./srf.db",
+    "db": "../viewer/srf.db",
     "output_dir": "./out/",
     "enabled": [ 
         "ZS", "ZM", "ZL", "ZC", "ZW", "KE",

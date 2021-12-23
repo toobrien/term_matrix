@@ -400,4 +400,4 @@ if __name__ == "__main__":
         t1 = time()
         print(f"complete: {(t1 - t0):0.2f} s")
 
-        app.run_server(debug = True)
+        app.run_server(debug = False)

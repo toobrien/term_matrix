@@ -51,8 +51,8 @@ def matrix(record_sets, width):
     d = empty((len(record_sets), width, width), dtype="f")
     md = empty((len(record_sets), width, width), dtype="i,i,i,U10")
 
-    d[::] = NaN
-    md[::] = NaN
+    d.fill(NaN)
+    md.fill(NaN)
 
     for i in range(len(record_sets)):
 
