@@ -1,6 +1,3 @@
 .vscode
 __pycache__
 srf.db
-config.json
-build_database.py
-update.sh
