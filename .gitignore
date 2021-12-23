@@ -1,6 +1,5 @@
 .vscode
 __pycache__
-out
 srf.db
 config.json
 build_database.py

@@ -20,4 +20,6 @@ contracts = {
     "CT": { "srf_name": "CT", "years": 5 },
     "GE": { "srf_name": "ED", "years": 7 },
     "ZQ": { "srf_name": "FF", "years": 7 },
+    "GC": { "srf_name": "GC", "years": 4 },
+    "HG": { "srf_name": "HG", "years": 2 }
 }
