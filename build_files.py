@@ -93,7 +93,7 @@ if __name__ == "__main__":
 
         for i in idx:
           
-            with open(f"{output_dir}{contract}_{i}.csv", "w") as fd:
+            with open(f"{output_dir}{contract}_{i}.csv", "w", newline = '') as fd:
                 
                 cells = sm.get_cells(i)
 
@@ -101,7 +101,7 @@ if __name__ == "__main__":
                 w.writerow(labels)
                 w.writerows(cells)
       
-        with open(f"{output_dir}{contract}.csv", "w") as fd:
+        with open(f"{output_dir}{contract}.csv", "w", newline = '') as fd:
         
             lines = sm.get_rows()
             w = writer(fd, quoting = QUOTE_NONNUMERIC)
