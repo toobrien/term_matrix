@@ -1,10 +1,11 @@
 from contracts import contracts
 from csv import QUOTE_NONNUMERIC, writer
-from json import dumps, loads
+from json import loads
 from record import record
 from spread_matrix import idx, headers, spread_matrix
 from sqlite3 import connect
 from time import time
+
 
 def get_db():
 
@@ -16,6 +17,7 @@ def get_db():
     db = connect(db_path)  
 
   return db
+
 
 def get_records(db, name, begin, end):
 
@@ -72,6 +74,7 @@ def get_spread_matrix(contract, start, end):
     db.close()
 
     return sm
+
 
 if __name__ == "__main__":
   

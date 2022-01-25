@@ -1,13 +1,12 @@
 {
-    "db": "./srf.db",
+    "db": "../data/futures.db",
     "output_dir": "./out/",
     "enabled": [ 
         "ZS", "ZM", "ZL", "ZC", "ZW", "KE",
         "KC", "CC", "CT",
         "HE", "LE",
-        "CL", "RB", "HO",
+        "CL", "RB", "HO", "NG",
         "GE",
         "GC", "HG"
-    ],
-    "quandl_api_key": "YOUR_API_KEY_HERE" 
+    ]
 }
