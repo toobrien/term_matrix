@@ -1,4 +1,3 @@
-from contracts import contracts
 from csv import QUOTE_NONNUMERIC, writer
 from json import loads
 from record import record
@@ -65,8 +64,7 @@ def get_spread_matrix(contract, start, end):
 
     db = get_db()
 
-    name = contracts[contract]["srf_name"]
-    records = get_records(db, name, start, end)
+    records = get_records(db, contract, start, end)
     record_sets = get_record_sets(records)
 
     sm = spread_matrix(contract, record_sets)
@@ -82,10 +80,10 @@ if __name__ == "__main__":
     
       config = loads(fd.read())
       output_dir = config["output_dir"]
-      active_contracts = { k : contracts[k] for k in config["enabled"] }
+      active_contracts = [ contract for contract in config["enabled"] ]
 
       start = "2000-01-01"
-      end = "2035-01-01"
+      end = "2040-01-01"
 
       for contract in active_contracts:
 

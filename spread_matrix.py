@@ -96,7 +96,7 @@ class spread_matrix:
 
     def __init__(self, contract, record_sets):
 
-        max_years = contracts[contract]["years"]
+        max_years = contracts[contract]
         
         d, md = matrix(record_sets, max_years * 12)
         
