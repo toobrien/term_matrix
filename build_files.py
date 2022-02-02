@@ -26,7 +26,7 @@ def get_records(db, name, begin, end):
             SELECT DISTINCT
                 name,
                 month,
-                CAST(year as INT),
+                CAST(year AS INT),
                 date,
                 settle,
                 CAST(julianday(date) - julianday(from_date) AS INT)

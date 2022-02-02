@@ -1,6 +1,5 @@
 .vscode
 __pycache__
 config.json
-srf.db
 update.sh
 out/*

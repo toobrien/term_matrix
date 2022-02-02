@@ -3,12 +3,13 @@ from enum import IntEnum
 from record import record
 from numpy import apply_along_axis, empty, isnan, nanmedian, NaN, sort, searchsorted, nanstd, warnings
 from record import record
-#from sys import maxsize
 from tabulate import tabulate
+
 
 warnings.filterwarnings('ignore')
 
 # CONSTANTS
+
 class meta(IntEnum):
     row_year = 0
     col_year = 1
@@ -45,7 +46,9 @@ month_itoa = [
     "N", "Q", "U", "V", "X", "Z"
 ]
 
+
 # UTILITY FUNCTIONS
+
 def matrix(record_sets, width):
 
     d = empty((len(record_sets), width, width), dtype="f")
@@ -91,7 +94,9 @@ def rank(a):
   todays_spread = a[-1]
   return searchsorted(a_1, todays_spread) / len(a_1)
 
+
 # CLASS
+
 class spread_matrix:
 
     def __init__(self, contract, record_sets):
@@ -156,6 +161,7 @@ class spread_matrix:
                 if isnan(spread): continue
             
                 # statistics
+                
                 mdt = md[today, i, j]
                 pct = t_pct[i, j]
                 med = t_med[i, j]
@@ -163,6 +169,7 @@ class spread_matrix:
                 dl = mdt[meta.days_listed]
 
                 # indexes
+
                 front_month = month_itoa[i % 12]
                 back_month = month_itoa[j % 12]
                 
@@ -179,6 +186,7 @@ class spread_matrix:
                 self.cells["days_listed"][row][col] = dl
 
                 # scatterplot, histogram, etc. data
+
                 cell_id = f"{front_month}{front_year}/{back_month}{back_year}"
 
                 for k in range(depth):

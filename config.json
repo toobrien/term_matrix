@@ -1,7 +1,8 @@
 {
     "db": "../data/futures.db",
     "output_dir": "./out/",
-    "enabled": [ 
+    "enabled": [
+        "VX",
         "ZS", "ZM", "ZL", "ZC", "ZW", "KE",
         "KT", "CJ", "TT", "YO",
         "HE", "LE",
