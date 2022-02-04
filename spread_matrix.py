@@ -90,7 +90,7 @@ def matrix(record_sets, width):
                     back[record.year],
                     back[record.days_listed],
                     back[record.date],
-                    back[record.days_to_expiration]
+                    front[record.days_to_expiration]
                 )
 
     return d, md
