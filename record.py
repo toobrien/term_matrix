@@ -7,3 +7,4 @@ class record(IntEnum):
   date = 3
   settle = 4
   days_listed = 5
+  days_to_expiration = 6

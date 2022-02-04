@@ -29,7 +29,8 @@ def get_records(db, name, begin, end):
             CAST(year AS INT),
             date,
             settle,
-            CAST(julianday(date) - julianday(from_date) AS INT)
+            CAST(julianday(date) - julianday(from_date) AS INT),
+            CAST(julianday(to_date) - julianday(date) AS INT)
         FROM ohlc INNER JOIN metadata USING(contract_id)
         WHERE name = "{name}"
         AND date BETWEEN "{begin}" AND "{end}"
@@ -42,8 +43,8 @@ def get_record_sets(records):
 
     record_sets = []
     
-    cur_date = records[0][record.date]
-    cur_set = []
+    cur_date    = records[0][record.date]
+    cur_set     = []
 
     for r in records:
 
@@ -51,8 +52,8 @@ def get_record_sets(records):
         
             record_sets.append(cur_set)
 
-            cur_date = r[record.date]
-            cur_set = []
+            cur_date    = r[record.date]
+            cur_set     = []
 
         cur_set.append(r)
 
@@ -64,7 +65,7 @@ def get_spread_matrix(contract, start, end):
 
     db = get_db()
 
-    records = get_records(db, contract, start, end)
+    records     = get_records(db, contract, start, end)
     record_sets = get_record_sets(records)
 
     sm = spread_matrix(contract, record_sets)
@@ -78,12 +79,12 @@ if __name__ == "__main__":
   
     with open("./config.json") as fd:
     
-        config = loads(fd.read())
-        output_dir = config["output_dir"]
-        active_contracts = [ contract for contract in config["enabled"] ]
+        config              = loads(fd.read())
+        output_dir          = config["output_dir"]
+        active_contracts    = [ contract for contract in config["enabled"] ]
 
-        start = "2000-01-01"
-        end = "2040-01-01"
+        start   = config["start_date"]
+        end     = config["end_date"]
 
         for contract in active_contracts:
 
@@ -99,13 +100,15 @@ if __name__ == "__main__":
                     cells = sm.get_cells(i)
 
                     w = writer(fd, quoting = QUOTE_NONNUMERIC)
+                
                     w.writerow(labels)
                     w.writerows(cells)
         
             with open(f"{output_dir}{contract}.csv", "w", newline = '') as fd:
             
-                lines = sm.get_rows()
-                w = writer(fd, quoting = QUOTE_NONNUMERIC)
+                lines   = sm.get_rows()
+                w       = writer(fd, quoting = QUOTE_NONNUMERIC)
+                
                 w.writerow(headers)
                 w.writerows(lines)
 

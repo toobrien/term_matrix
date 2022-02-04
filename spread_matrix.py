@@ -3,28 +3,34 @@ from enum import IntEnum
 from record import record
 from numpy import apply_along_axis, empty, isnan, nanmedian, NaN, sort, searchsorted, nanstd, warnings
 from record import record
-from tabulate import tabulate
 
 
 warnings.filterwarnings('ignore')
 
+
 # CONSTANTS
 
 class meta(IntEnum):
+
     row_year = 0
     col_year = 1
     days_listed = 2
     date = 3
+    days_to_expiration = 4
+
 
 class spread_row(IntEnum):
+
     cell_id = 0
     spread_id = 1
     date = 2
     settle = 3
     days_listed = 4
+    days_to_expiration = 5
 
-headers = [ "cell_id", "spread_id", "date", "settle", "days_listed" ]
-idx = [ "spread", "percentile", "median", "stdev", "days_listed" ]
+
+headers = [ "cell_id", "spread_id", "date", "settle", "days_listed", "days_to_expiration" ]
+idx = [ "spread", "percentile", "median", "stdev", "days_listed", "days_to_expiration" ]
 
 month_atoi = {
     "F": 0,
@@ -41,6 +47,7 @@ month_atoi = {
     "Z": 11
 }
 
+
 month_itoa = [
     "F", "G", "H", "J", "K", "M",
     "N", "Q", "U", "V", "X", "Z"
@@ -52,7 +59,7 @@ month_itoa = [
 def matrix(record_sets, width):
 
     d = empty((len(record_sets), width, width), dtype="f")
-    md = empty((len(record_sets), width, width), dtype="i,i,i,U10")
+    md = empty((len(record_sets), width, width), dtype="i,i,i,U10,i")
 
     d.fill(NaN)
     md.fill(NaN)
@@ -82,16 +89,19 @@ def matrix(record_sets, width):
                     front[record.year],
                     back[record.year],
                     back[record.days_listed],
-                    back[record.date]
+                    back[record.date],
+                    back[record.days_to_expiration]
                 )
 
     return d, md
+
 
 def rank(a):
 
   a_0 = a[~isnan(a)]
   a_1 = sort(a_0)
   todays_spread = a[-1]
+
   return searchsorted(a_1, todays_spread) / len(a_1)
 
 
@@ -166,24 +176,26 @@ class spread_matrix:
                 pct = t_pct[i, j]
                 med = t_med[i, j]
                 std = t_std[i, j]
-                dl = mdt[meta.days_listed]
+                dl  = mdt[meta.days_listed]
+                dte = mdt[meta.days_to_expiration] 
 
                 # indexes
 
                 front_month = month_itoa[i % 12]
-                back_month = month_itoa[j % 12]
+                back_month  = month_itoa[j % 12]
                 
-                front_year = mdt[meta.row_year] % 100
-                back_year = mdt[meta.col_year] % 100
+                front_year  = mdt[meta.row_year] % 100
+                back_year   = mdt[meta.col_year] % 100
 
                 row = cell_map[(front_month, front_year)]
                 col = cell_map[(back_month, back_year)]
                 
-                self.cells["spread"][row][col] = spread
-                self.cells["percentile"][row][col] = round(pct, 3)
-                self.cells["median"][row][col] = med
-                self.cells["stdev"][row][col] = round(std, 2)
-                self.cells["days_listed"][row][col] = dl
+                self.cells["spread"][row][col]              = spread
+                self.cells["percentile"][row][col]          = round(pct, 3)
+                self.cells["median"][row][col]              = med
+                self.cells["stdev"][row][col]               = round(std, 2)
+                self.cells["days_listed"][row][col]         = dl
+                self.cells["days_to_expiration"][row][col]  = dte
 
                 # scatterplot, histogram, etc. data
 
@@ -195,12 +207,13 @@ class spread_matrix:
                     
                     if ~isnan(settle):
 
-                        mdk = md[k, i, j]
-                        front_year_k = str(mdk[meta.row_year])[2:]
-                        back_year_k = str(md[k, i, j][meta.col_year])[2:]
-                        spread_id_k = f"{front_month}{front_year_k}/{back_month}{back_year_k}"                        
-                        date_k = mdk[meta.date]
-                        days_listed_k = int(mdk[meta.days_listed])
+                        mdk                     = md[k, i, j]
+                        front_year_k            = str(mdk[meta.row_year])[2:]
+                        back_year_k             = str(md[k, i, j][meta.col_year])[2:]
+                        spread_id_k             = f"{front_month}{front_year_k}/{back_month}{back_year_k}"                        
+                        date_k                  = mdk[meta.date]
+                        days_listed_k           = int(mdk[meta.days_listed])
+                        days_to_expiration_k    = int(mdk[meta.days_to_expiration])
 
                         rows.append(
                             [ 
@@ -209,16 +222,14 @@ class spread_matrix:
                                 date_k,
                                 settle,
                                 days_listed_k,
+                                days_to_expiration_k
                             ]
                         )
         self.set_rows(rows)
         self.set_labels(lbls)
         self.set_metadata(md)
         self.set_data(d)
-        
-    def table(self, fmt):
 
-        return tabulate(self.get_cells(), self.get_labels(), fmt)
 
     def set_cells(self, cells): self.cells = cells
     def set_data(self, data): self.data = data

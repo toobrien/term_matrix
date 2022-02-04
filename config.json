@@ -1,6 +1,8 @@
 {
     "db": "../data/futures.db",
-    "output_dir": "./out/",
+    "output_dir":   "./out/",
+    "start_date":   "2000-01-01",
+    "end_date":     "2040-01-01",
     "enabled": [
         "VX",
         "ZS", "ZM", "ZL", "ZC", "ZW", "KE",

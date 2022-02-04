@@ -1,22 +1,22 @@
-from csv import QUOTE_NONNUMERIC, reader
-from dash import callback_context, Dash
-import dash_table as dt
-from dash_html_components import Div, Td, Tr, Table
-from dash_core_components import Dropdown, Graph, Input
-from dash.dependencies import Input, Output
-from json import loads
-import plotly.graph_objects as go
-from spread_matrix import idx, spread_row
-from time import time
+from    csv                         import QUOTE_NONNUMERIC, reader
+from    dash                        import callback_context, Dash
+import  dash_table as dt
+from    dash_html_components        import Div, Td, Tr, Table
+from    dash_core_components        import Dropdown, Graph, Input
+from    dash.dependencies           import Input, Output, State
+from    json                        import loads
+import  plotly.graph_objects as go
+from    spread_matrix               import idx, spread_row
+from    time                        import time
 
 # CONSTANTS
 
-app = Dash(__name__)
-app.title = "spread_matrix"
+app         = Dash(__name__)
+app.title   = "spread_matrix"
 
 # data
-cells = {}
-rows = {}
+cells   = {}
+rows    = {}
 
 # figure layouts
 margins = {
@@ -54,8 +54,9 @@ element_references = {
     "heatmap": None
 }
 
-step = 0.8 / 25
+step        = 0.8 / 25
 min_opacity = 0.2 - step
+
 
 # FUNCTIONS
 
@@ -69,12 +70,13 @@ def get_spread_rows(cell):
     spread_row_subset = None
 
     if cell:
-        contract = get_contract(cell)
-        labels = cells[contract]["labels"]
+
+        contract    = get_contract(cell)
+        labels      = cells[contract]["labels"]
 
         front_month = labels[cell["row"]]
-        back_month = labels[cell["column"] - 1]
-        cell_id = f"{front_month[2:]}/{back_month[2:]}"
+        back_month  = labels[cell["column"] - 1]
+        cell_id     = f"{front_month[2:]}/{back_month[2:]}"
 
         spread_row_set = rows[contract]
 
@@ -110,16 +112,16 @@ def load_cells(config):
 
             with open(f"{output_dir}/{contract}_{i}.csv") as fd:
 
-                r = reader(fd, quoting = QUOTE_NONNUMERIC)
-                data = [ cell_row for cell_row in r ]
-                labels = data[0]
-                data = data[1:]
+                r       = reader(fd, quoting = QUOTE_NONNUMERIC)
+                data    = [ cell_row for cell_row in r ]
+                labels  = data[0]
+                data    = data[1:]
 
                 cells[contract][i] = data
                 cells[contract]["labels"] = labels
 
 
-def get_scatterplot(spread_rows):
+def get_scatterplot(spread_rows, align):
 
     fig = go.Figure(
             layout = scatterplot_layout
@@ -158,7 +160,7 @@ def get_scatterplot(spread_rows):
                     "opacity": opacity
                 }
 
-            traces[id]["x"].append(r[spread_row.days_listed])
+            traces[id]["x"].append(r[align])
             traces[id]["y"].append(r[spread_row.settle])
             traces[id]["text"].append(r[spread_row.date])
 
@@ -184,8 +186,11 @@ def get_pdf(spread_rows):
 
         fig.add_trace(
             go.Histogram(
-                x = [ r[spread_row.settle] for r in spread_rows ],
-                histnorm = "probability"
+                x = [ 
+                    r[spread_row.settle] 
+                    for r in spread_rows 
+                ],
+                histnorm    = "probability"
             )
         )
 
@@ -198,18 +203,19 @@ def get_heatmap(contract):
     lbls = cells[contract]["labels"]
     
     # reverse so heatmap matches table
-    reversed_lbls = lbls[::-1]
-    reversed_pct = pct[::-1]
+
+    reversed_lbls   = lbls[::-1]
+    reversed_pct    = pct[::-1]
 
     return Graph(
-        id = "heatmap",
-        figure = go.Figure(
-        layout = heatmap_layout,
-        data = go.Heatmap(
-                x = lbls,
-                y = reversed_lbls,
-                z = reversed_pct,
-                showscale = False
+        id      = "heatmap",
+        figure  = go.Figure(
+        layout  = heatmap_layout,
+        data    = go.Heatmap(
+                    x = lbls,
+                    y = reversed_lbls,
+                    z = reversed_pct,
+                    showscale = False
             )
         )
     )
@@ -226,7 +232,7 @@ def get_graph_row(config):
                 Div(
                     id = "scatterplot_container",
                     children = [
-                        get_scatterplot(None)
+                        get_scatterplot(None, None)
                     ]
                 )
             ]),
@@ -312,21 +318,40 @@ def get_select_row(config):
     select_row = Tr(
         id = "select_row",
         children = [
-            Td([
-                Dropdown(
-                    id = "contract_dropdown",
-                    options = [ 
-                        { "label": contract, "value": contract }
-                        for contract in config["enabled"]
-                    ]
-                )
-            ]),
-            Td([
-                # empty
-            ]),
-            Td([
-                # empty
-            ])
+            Td(
+                [
+                    Dropdown(
+                        id = "contract_dropdown",
+                        options = [ 
+                            { "label": contract, "value": contract }
+                            for contract in config["enabled"]
+                        ]
+                    )
+                ]
+            ),
+            Td(
+                [
+                    Dropdown(
+                        id = "align_dropdown",
+                        options = [
+                            {
+                                "label": "days_listed",
+                                "value": spread_row.days_listed 
+                            },
+                            { 
+                                "label": "days_to_expiration", 
+                                "value": spread_row.days_to_expiration
+                            },
+                            { 
+                                "label": "date", 
+                                "value": spread_row.date 
+                            },
+                        ],
+                        value = spread_row.days_listed
+                    )
+                ]
+            ),
+            Td()
         ]
     )
 
@@ -352,7 +377,7 @@ def get_layout(config):
 @app.callback(
     Output("data_table_container", "children"),
     Output("heatmap_container", "children"),
-    Input("contract_dropdown", "value")
+    Input("contract_dropdown", "value"),
 )
 def update_table_and_heatmap(contract):
 
@@ -368,9 +393,10 @@ def update_table_and_heatmap(contract):
 @app.callback(
     Output("scatterplot_container", "children"),
     Output("pdf_container", "children"),
-    Input("data_table", "active_cell")
+    Input("data_table", "active_cell"),
+    Input("align_dropdown", "value")
 )
-def update_scatter_and_pdf(cell):
+def update_scatter_and_pdf(cell, align):
 
     source = callback_context.triggered[0]["prop_id"]
 
@@ -378,10 +404,11 @@ def update_scatter_and_pdf(cell):
 
     spread_rows = get_spread_rows(cell)
     
-    scatterplot = get_scatterplot(spread_rows)
+    scatterplot = get_scatterplot(spread_rows, align)
     pdf = get_pdf(spread_rows)
 
     return scatterplot, pdf
+
 
 if __name__ == "__main__":
 
@@ -400,4 +427,4 @@ if __name__ == "__main__":
         t1 = time()
         print(f"complete: {(t1 - t0):0.2f} s")
 
-        app.run_server(debug = False)
+        app.run_server(debug = True)
