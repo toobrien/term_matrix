@@ -334,10 +334,6 @@ def get_select_row(config):
                     Dropdown(
                         id = "align_dropdown",
                         options = [
-                            {
-                                "label": "days_listed",
-                                "value": spread_row.days_listed 
-                            },
                             { 
                                 "label": "days_to_expiration", 
                                 "value": spread_row.days_to_expiration
@@ -346,8 +342,12 @@ def get_select_row(config):
                                 "label": "date", 
                                 "value": spread_row.date 
                             },
+                            {
+                                "label": "days_listed",
+                                "value": spread_row.days_listed 
+                            }
                         ],
-                        value = spread_row.days_listed
+                        value = spread_row.days_to_expiration
                     )
                 ]
             ),
